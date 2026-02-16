@@ -1,10 +1,10 @@
 name: Snowpark ELT Pipeline
 
 on:
-  workflow_dispatch:        # manual trigger
+  workflow_dispatch:        # Manual trigger
   push:
     branches:
-      - main                # auto-run on push to main
+      - main                # Auto-run on push to main
 
 jobs:
   snowpark-pipeline:
@@ -21,8 +21,9 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install snowflake-snowpark-python
+        pip install snowflake-snowpark-python==1.11.1
 
+    # Step 1: Setup database, schemas, stages
     - name: Run setup.sql
       env:
         SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
@@ -34,6 +35,7 @@ jobs:
       run: |
         python utils/run_sql.py setup.sql
 
+    # Step 2: RAW layer
     - name: Run RAW layer
       env:
         SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
@@ -41,9 +43,11 @@ jobs:
         SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
         SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
         SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+        SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
       run: |
         python snowpark/raw_load.py
 
+    # Step 3: TRANSFORMED layer
     - name: Run TRANSFORMED layer
       env:
         SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
@@ -51,9 +55,11 @@ jobs:
         SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
         SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
         SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+        SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
       run: |
         python snowpark/transformed_load.py
 
+    # Step 4: CURATED layer
     - name: Run CURATED layer
       env:
         SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
@@ -61,5 +67,6 @@ jobs:
         SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
         SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
         SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+        SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
       run: |
         python snowpark/curated_load.py
