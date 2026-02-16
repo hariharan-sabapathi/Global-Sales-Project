@@ -1,7 +1,10 @@
+import os
 import snowflake.snowpark as snowpark
+from snowflake.snowpark import Session
 
 def main(session: snowpark.Session):
-
+    
+    session.sql("USE DATABASE SNOWPARK_DB").collect()
     session.sql("USE SCHEMA SNOWPARK_DB.STAGGING").collect()
 
     session.sql("TRUNCATE TABLE INDIA_ORDERS").collect()
@@ -10,7 +13,7 @@ def main(session: snowpark.Session):
     session.sql("TRUNCATE TABLE USA_SALES_ORDER_CP").collect()
     session.sql("TRUNCATE TABLE UK_SALES_ORDER_CP").collect()
 
-
+    
     # LOAD INDIA CSV FILES
     session.sql("""
         COPY INTO INDIA_ORDERS
@@ -26,13 +29,21 @@ def main(session: snowpark.Session):
     session.sql("""
         COPY INTO INDIA_ORDER_DETAILS
         FROM @SNOWPARK_STAGE/india/order_details.csv
-        FILE_FORMAT = (TYPE = CSV SKIP_HEADER = 1 FIELD_OPTIONALLY_ENCLOSED_BY = '"')
+        FILE_FORMAT = (
+            TYPE = CSV
+            SKIP_HEADER = 1
+            FIELD_OPTIONALLY_ENCLOSED_BY = '"'
+        )
     """).collect()
 
     session.sql("""
         COPY INTO INDIA_SALES_TARGETS
         FROM @SNOWPARK_STAGE/india/sales_targets.csv
-        FILE_FORMAT = (TYPE = CSV SKIP_HEADER = 1 FIELD_OPTIONALLY_ENCLOSED_BY = '"')
+        FILE_FORMAT = (
+            TYPE = CSV
+            SKIP_HEADER = 1
+            FIELD_OPTIONALLY_ENCLOSED_BY = '"'
+        )
     """).collect()
 
 
@@ -59,9 +70,7 @@ def main(session: snowpark.Session):
     """).collect()
 
 
-    # SWITCH TO RAW SCHEMA
     session.sql("USE SCHEMA SNOWPARK_DB.RAW").collect()
-
 
     # INDIA RAW TABLES
     df_india_orders = session.sql("""
@@ -105,7 +114,6 @@ def main(session: snowpark.Session):
     df_india_sales_targets.write.mode("overwrite") \
         .save_as_table("SNOWPARK_DB.RAW.INDIA_SALES_TARGETS")
 
-
     # USA RAW TABLE
     df_usa_sales = session.sql("""
         SELECT
@@ -131,10 +139,9 @@ def main(session: snowpark.Session):
             CURRENT_TIMESTAMP() AS INSERT_DTS
         FROM SNOWPARK_DB.STAGGING.USA_SALES_ORDER_CP
     """)
-    
+
     df_usa_sales.write.mode("overwrite") \
         .save_as_table("SNOWPARK_DB.RAW.USA_SALES_ORDER")
-
 
     # UK RAW TABLE
     df_uk_sales = session.sql("""
@@ -150,8 +157,24 @@ def main(session: snowpark.Session):
             CURRENT_TIMESTAMP() AS INSERT_DTS
         FROM SNOWPARK_DB.STAGGING.UK_SALES_ORDER_CP
     """)
-    
+
     df_uk_sales.write.mode("overwrite") \
         .save_as_table("SNOWPARK_DB.RAW.UK_SALES_ORDER")
 
     return "STAGGING → RAW load completed successfully"
+
+
+# Entry point for GitHub Actions / CLI execution
+if __name__ == "__main__":
+
+    session = Session.builder.configs({
+        "account": os.environ["SNOWFLAKE_ACCOUNT"],
+        "user": os.environ["SNOWFLAKE_USER"],
+        "password": os.environ["SNOWFLAKE_PASSWORD"],
+        "role": os.environ["SNOWFLAKE_ROLE"],
+        "warehouse": os.environ["SNOWFLAKE_WAREHOUSE"],
+        "database": os.environ.get("SNOWFLAKE_DATABASE", "SNOWPARK_DB"),
+    }).create()
+
+    main(session)
+    session.close()
