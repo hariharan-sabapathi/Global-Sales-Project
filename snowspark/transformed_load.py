@@ -1,12 +1,13 @@
+import os
 import snowflake.snowpark as snowpark
-from snowflake.snowpark.functions import lit, current_timestamp
+from snowflake.snowpark import Session
 
 def main(session: snowpark.Session):
 
-    
+    session.sql("USE DATABASE SNOWPARK_DB").collect()
     session.sql("USE SCHEMA SNOWPARK_DB.RAW").collect()
 
-    # INDIA TRANSFORMED (join orders + order_details)
+    # INDIA TRANSFORMED (orders + order_details)
     df_india = session.sql("""
         SELECT
             o.ORDER_ID,
@@ -65,15 +66,31 @@ def main(session: snowpark.Session):
         FROM SNOWPARK_DB.RAW.UK_SALES_ORDER
     """)
 
-    # UNION ALL COUNTRIES
+    # UNION ALL COUNTRIES (schema-safe)
     df_global_sales = (
         df_india
         .union_by_name(df_usa)
         .union_by_name(df_uk)
     )
 
-    
+    # Write TRANSFORMED table
     df_global_sales.write.mode("overwrite") \
         .save_as_table("SNOWPARK_DB.TRANSFORMED.GLOBAL_SALES_ORDER")
 
     return "RAW → TRANSFORMED load completed successfully"
+
+
+# Entry point for GitHub Actions / CLI execution
+if __name__ == "__main__":
+
+    session = Session.builder.configs({
+        "account": os.environ["SNOWFLAKE_ACCOUNT"],
+        "user": os.environ["SNOWFLAKE_USER"],
+        "password": os.environ["SNOWFLAKE_PASSWORD"],
+        "role": os.environ["SNOWFLAKE_ROLE"],
+        "warehouse": os.environ["SNOWFLAKE_WAREHOUSE"],
+        "database": os.environ.get("SNOWFLAKE_DATABASE", "SNOWPARK_DB"),
+    }).create()
+
+    main(session)
+    session.close()
