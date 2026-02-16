@@ -1,0 +1,65 @@
+name: Snowpark ELT Pipeline
+
+on:
+  workflow_dispatch:        # manual trigger
+  push:
+    branches:
+      - main                # auto-run on push to main
+
+jobs:
+  snowpark-pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
+
+    - name: Install dependencies
+      run: |
+        pip install snowflake-snowpark-python
+
+    - name: Run setup.sql
+      env:
+        SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+        SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+        SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+        SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
+        SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+        SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
+      run: |
+        python utils/run_sql.py setup.sql
+
+    - name: Run RAW layer
+      env:
+        SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+        SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+        SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+        SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
+        SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+      run: |
+        python snowpark/raw_load.py
+
+    - name: Run TRANSFORMED layer
+      env:
+        SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+        SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+        SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+        SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
+        SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+      run: |
+        python snowpark/transformed_load.py
+
+    - name: Run CURATED layer
+      env:
+        SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+        SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+        SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+        SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
+        SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+      run: |
+        python snowpark/curated_load.py
