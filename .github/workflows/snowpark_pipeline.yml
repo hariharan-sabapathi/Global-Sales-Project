@@ -33,7 +33,7 @@ jobs:
         SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
         SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
       run: |
-        python utils/run_sql.py setup.sql
+            python utils/run_sql.py sql/setup.sql
 
     # Step 2: RAW layer
     - name: Run RAW layer
