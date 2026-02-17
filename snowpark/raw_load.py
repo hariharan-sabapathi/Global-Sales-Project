@@ -1,3 +1,9 @@
+- name: Debug repo contents
+  run: |
+    pwd
+    ls
+    ls snowpark || echo "snowpark folder missing"
+
 import os
 import snowflake.snowpark as snowpark
 from snowflake.snowpark import Session
@@ -177,4 +183,5 @@ if __name__ == "__main__":
     }).create()
 
     main(session)
+
     session.close()
