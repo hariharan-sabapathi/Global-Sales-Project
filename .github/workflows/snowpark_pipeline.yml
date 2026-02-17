@@ -45,7 +45,7 @@ jobs:
         SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
         SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
       run: |
-        python ./snowpark/raw_load.py
+        python snowpark/raw_load.py
 
     # Step 3: TRANSFORMED layer
     - name: Run TRANSFORMED layer
