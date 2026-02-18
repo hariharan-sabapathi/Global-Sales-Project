@@ -1,77 +1,68 @@
-Global Sales ELT Pipeline (Snowflake + Snowpark + GitHub Actions + Power BI)
-Project Overview
+# Global Sales ELT Pipeline  
+**Snowflake • Snowpark (Python) • GitHub Actions • Power BI**
 
-This project demonstrates an end-to-end ELT data pipeline built on Snowflake using Snowpark (Python) for transformations, GitHub Actions for CI/CD-style orchestration, and Power BI for business intelligence and analytics.
+## Overview
 
-The pipeline ingests heterogeneous sales datasets from multiple countries, standardizes and transforms them into analytics-ready models, and exposes curated datasets directly to Power BI dashboards for decision-making.
+This project demonstrates a **production-style end-to-end ELT data pipeline** built on **Snowflake**, using **Snowpark (Python)** for transformations, **GitHub Actions** for CI/CD-style orchestration, and **Power BI** for analytics and reporting.
 
-This project intentionally mirrors a production-style data platform, covering ingestion, transformation, automation, and visualization — rather than a one-time script execution.
+The pipeline ingests **heterogeneous global sales data** from multiple countries, standardizes and transforms it through layered warehouse models, and exposes **analytics-ready curated tables** directly to Power BI dashboards.
 
-Architecture
+This project intentionally mirrors a **real-world data platform**, covering ingestion, transformation, automation, validation, and visualization — not a one-off script.
 
-Data Sources
+---
 
-India sales data (CSV)
+## Architecture
 
-USA sales data (Parquet)
+### Data Sources
+- India sales data (CSV)
+- USA sales data (Parquet)
+- UK sales data (CSV)
 
-UK sales data (CSV)
+### Storage
+- Amazon S3 (Snowflake external stage)
 
-Storage
+### Processing & Warehousing
+- Snowflake
+- Snowpark (Python)
 
-Amazon S3 (external stage)
+### Orchestration / CI-CD
+- GitHub Actions
 
-Processing & Warehousing
+### Analytics & Visualization
+- Power BI (direct connection to curated Snowflake tables)
 
-Snowflake
+---
 
-Snowpark (Python)
+## Data Warehouse Design
 
-Orchestration / CI-CD
+The pipeline follows a **layered warehouse architecture** commonly used in production systems:
 
-GitHub Actions
+### STAGING (Landing Layer)
+- Raw data loaded from S3
+- Minimal validation
+- Schema matches source systems
 
-Analytics & Visualization
+### RAW (Cleaned & Typed Layer)
+- Data type normalization
+- Basic data cleaning
+- Insert timestamps added
 
-Power BI (connected directly to curated Snowflake tables)
+### TRANSFORMED (Business-Standardized Layer)
+- Country-level schema standardization
+- Joining India order and order-detail datasets
+- Union of India, USA, and UK data
+- Creation of a unified `GLOBAL_SALES_ORDER` table
 
-Data Warehouse Layering
+### CURATED (Analytics-Ready Layer)
+- Aggregated, business-facing tables
+- Optimized for BI tools
+- Directly consumed by Power BI dashboards
 
-The pipeline follows a standard layered warehouse design:
+---
 
-STAGGING (Landing layer)
+## Repository Structure
 
-Raw data loaded from S3
-
-Minimal validation
-
-Schema matches source systems
-
-RAW (Cleaned & typed layer)
-
-Data type normalization
-
-Basic cleaning
-
-Insert timestamps added
-
-TRANSFORMED (Business-standardized layer)
-
-Country-level standardization
-
-Schema alignment across regions
-
-Unified global sales table
-
-CURATED (Analytics-ready layer)
-
-Aggregated and business-facing tables
-
-Optimized for reporting and dashboards
-
-Directly consumed by Power BI
-
-Repository Structure
+```text
 Global-Sales-ELT-Pipeline/
 ├── snowpark/
 │   ├── raw_load.py
@@ -86,223 +77,188 @@ Global-Sales-ELT-Pipeline/
 │       └── snowpark_pipeline.yml
 └── README.md
 
-Core Components
-1. setup.sql
+## Core Components
 
+### 1. `setup.sql`
 Creates all required Snowflake objects:
+- Database and schemas
+- Staging tables
+- External stage (Amazon S3)
 
-Database and schemas
+This script is **idempotent** and can be safely re-run without side effects.
 
-Staging tables
+---
 
-External stage (S3)
+### 2. `raw_load.py`
+Handles the **Extract & Load** phase of the pipeline:
+- Truncates staging tables
+- Loads raw files from S3 using `COPY INTO`
+- Performs basic cleaning and data type normalization
+- Writes cleaned data into the `RAW` schema
 
-This script is designed to be idempotent and can be safely re-run.
+---
 
-2. raw_load.py
+### 3. `transformed_load.py`
+Handles the **Transform** phase:
+- Standardizes schemas across countries
+- Joins India order and order-detail datasets
+- Unions India, USA, and UK sales data
+- Produces a unified `GLOBAL_SALES_ORDER` table
 
-Responsible for:
+---
 
-Truncating staging tables
+### 4. `curated_load.py`
+Creates **analytics-ready curated tables**, including:
+- Sales by country
+- Category performance
+- Monthly sales trends
+- India sales vs targets
+- Top products by revenue
 
-Loading raw files from S3 using COPY INTO
+These tables are optimized for **direct BI consumption**.
 
-Cleaning and typing data
+---
 
-Writing cleaned results into the RAW schema
+### 5. `verify_pipeline.sql`
+A **read-only validation script** used to:
+- Confirm row counts at each warehouse layer
+- Inspect curated tables
+- Validate pipeline correctness
 
-This script represents the Extract and Load portion of the pipeline.
+This script is intentionally **not automated** and is meant for human inspection.
 
-3. transformed_load.py
+---
 
-Responsible for:
+## Power BI Integration
 
-Standardizing schemas across countries
+Power BI serves as the analytics and reporting layer, connected directly to the `CURATED` schema in Snowflake.
 
-Joining India order and order-detail datasets
+### Power BI Data Model
+Power BI consumes the following curated tables:
+- `SALES_BY_COUNTRY`
+- `MONTHLY_SALES_TREND`
+- `CATEGORY_PERFORMANCE`
+- `TOP_PRODUCTS_BY_REVENUE`
+- `INDIA_SALES_VS_TARGET`
 
-Unioning India, USA, and UK data
+These tables act as **read-only semantic layers**, ensuring that all business logic remains inside Snowflake.
 
-Creating a single GLOBAL_SALES_ORDER table
+---
 
-This script represents the Transform portion of the pipeline.
-
-4. curated_load.py
-
-Creates analytics-ready tables including:
-
-Sales by country
-
-Category performance
-
-Monthly sales trends
-
-India sales vs targets
-
-Top products by revenue
-
-These tables are designed for direct consumption by BI tools.
-
-5. verify_pipeline.sql
-
-Read-only validation script used to:
-
-Confirm row counts at each layer
-
-Inspect curated tables
-
-Validate pipeline correctness
-
-This script is intentionally not automated and is meant for human inspection.
-
-Power BI Integration
-
-Power BI is used as the analytics and reporting layer, connected directly to the CURATED schema in Snowflake.
-
-Power BI Data Model
-
-Power BI connects to the following curated tables:
-
-SALES_BY_COUNTRY
-
-MONTHLY_SALES_TREND
-
-CATEGORY_PERFORMANCE
-
-TOP_PRODUCTS_BY_REVENUE
-
-INDIA_SALES_VS_TARGET
-
-These tables are modeled as read-only semantic layers, ensuring that all business logic remains inside Snowflake.
-
-Power BI Dashboards
+### Power BI Dashboards
 
 The Power BI report includes:
 
-Global Sales KPIs
+#### Global Sales KPIs
+- Total Sales
+- Total Quantity
+- Profit Margin
 
-Total Sales
+#### Sales Performance Analysis
+- Sales by Country
+- Monthly Sales Trend by Country
+- Sales by Category
 
-Total Quantity
+#### Target vs Actual Analysis (India)
+- Actual vs Target sales line chart
+- Variance heatmap by category
+- KPI indicators for goal tracking
 
-Profit Margin
+#### Distribution & Variability Analysis
+- Box plot showing variance distribution across categories
 
-Sales Performance Analysis
+These dashboards validate that the ELT pipeline produces **business-consumable outputs**, not just transformed tables.
 
-Sales by Country
+---
 
-Monthly Sales Trend by Country
+## Power BI Refresh Strategy
 
-Sales by Category
+1. GitHub Actions executes the ELT pipeline  
+2. Snowflake curated tables are updated  
+3. Power BI refresh pulls the latest data from Snowflake  
 
-Target vs Actual Analysis (India)
+This mirrors a **real-world warehouse → BI workflow**.
 
-Actual vs Target Sales Line Chart
+---
 
-Variance Heatmap by Category
+## GitHub Actions Orchestration
 
-KPI indicators for goal tracking
+The pipeline is orchestrated using **GitHub Actions** to provide lightweight CI/CD without requiring Airflow.
 
-Distribution & Variability Analysis
+### Workflow Behavior
+- Triggered on:
+  - Push to `main`
+  - Manual workflow dispatch
+- Executes in order:
+  1. `setup.sql`
+  2. `raw_load.py`
+  3. `transformed_load.py`
+  4. `curated_load.py`
 
-Box Plot showing variance distribution across categories
+### Purpose of Automation
+- Ensures reproducibility
+- Validates pipeline execution without manual intervention
+- Provides execution logs and failure visibility
+- Demonstrates production readiness
 
-These dashboards validate that the ELT pipeline produces business-consumable outputs, not just transformed tables.
+Automation is used for **execution and validation only**, not visualization.
 
-Power BI Refresh Strategy
+---
 
-GitHub Actions runs the ELT pipeline
+## How to Run the Project
 
-Snowflake tables are updated
+### Option 1: Manual (Development / Debugging)
 
-Power BI refresh pulls latest curated data from Snowflake
-
-This mirrors a real-world warehouse → BI workflow.
-
-GitHub Actions Orchestration
-
-The pipeline is orchestrated using GitHub Actions to provide a lightweight CI/CD experience without requiring Airflow or other schedulers.
-
-Workflow Behavior
-
-Triggered on push to main or manual dispatch
-
-Executes steps in order:
-
-setup.sql
-
-raw_load.py
-
-transformed_load.py
-
-curated_load.py
-
-Purpose of Automation
-
-Ensures reproducibility
-
-Validates pipeline execution without manual intervention
-
-Provides execution logs and failure visibility
-
-Demonstrates production-readiness
-
-Automation is not used to display data, only to confirm successful execution.
-
-How to Run the Project
-Option 1: Manual (Development / Debugging)
-
-Run in Snowflake:
-
-setup.sql
-
-raw_load.py
-
-transformed_load.py
-
-curated_load.py
-
-verify_pipeline.sql
+Run the following in Snowflake:
+1. `setup.sql`
+2. `raw_load.py`
+3. `transformed_load.py`
+4. `curated_load.py`
+5. `verify_pipeline.sql`
 
 Then refresh Power BI to view updated dashboards.
 
-Option 2: Automated (CI/CD)
+---
 
-Push changes to the main branch
+### Option 2: Automated (CI/CD)
 
-GitHub Actions automatically executes the pipeline
+1. Push changes to the `main` branch
+2. GitHub Actions automatically executes the pipeline
+3. Verify results using `verify_pipeline.sql`
+4. Refresh Power BI dashboards
 
-Verify results in Snowflake using verify_pipeline.sql
+---
 
-Refresh Power BI dashboards
-
-How to Verify the Pipeline
+## How to Verify the Pipeline
 
 Verification is intentionally separated from execution.
 
 Example checks:
-
+```sql
 SELECT COUNT(*) FROM SNOWPARK_DB.RAW.INDIA_ORDERS;
 SELECT COUNT(*) FROM SNOWPARK_DB.TRANSFORMED.GLOBAL_SALES_ORDER;
 SELECT * FROM SNOWPARK_DB.CURATED.SALES_BY_COUNTRY;
 
 
-Visual verification is done via Power BI dashboards.
+Visual verification is performed through Power BI dashboards, ensuring that curated tables produce meaningful and accurate business insights.
 
-Key Takeaways
+---
 
-Demonstrates ELT best practices
+## Key Takeaways
 
-Uses Snowpark for scalable transformations
+- Demonstrates modern **ELT best practices** using a cloud data warehouse
+- Uses **Snowpark** for scalable, in-warehouse transformations
+- Applies a **layered warehouse architecture** (Staging → Raw → Transformed → Curated)
+- Implements **practical CI/CD-style orchestration** without Airflow
+- Integrates **Snowflake directly with Power BI** for analytics and reporting
+- Clearly separates **execution, validation, and visualization** responsibilities
 
-Applies layered warehouse design
+---
 
-Shows practical CI/CD without Airflow
+## Author Notes
 
-Integrates Snowflake directly with Power BI
-
-Separates execution, validation, and visualization concerns
-
-Author Notes
-
-This project is intentionally scoped to balance clarity, correctness, and production realism, making it suitable for interviews, demos, and learning modern data engineering workflows.
+This project is intentionally scoped to balance **clarity, correctness, and production realism**.  
+It is designed to be suitable for:
+- Technical interviews
+- Portfolio demonstrations
+- Learning and showcasing modern data engineering workflows
