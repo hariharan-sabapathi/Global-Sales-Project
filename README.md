@@ -77,8 +77,11 @@ Global-Sales-ELT-Pipeline/
 │       └── snowpark_pipeline.yml
 └── README.md
 
-## Core Components
+---
 
+
+**## Core Components
+**
 ### 1. `setup.sql`
 Creates all required Snowflake objects:
 - Database and schemas
