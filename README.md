@@ -82,6 +82,9 @@ Global-Sales-ELT-Pipeline/
 │   └── curated_load.py
 ├── sql/
 │   └── setup.sql
+├── powerbi/
+│   ├── Global Sales Analytics Model.pbix
+│   └── Global Sales Analytics Model.pdf
 ├── utils/
 │   └── run_sql.py
 ├── .github/
